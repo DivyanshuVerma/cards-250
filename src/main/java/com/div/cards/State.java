@@ -1,0 +1,11 @@
+package com.div.cards;
+
+public enum State {
+    INITIALIZING,
+    WAITING_FOR_PLAYERS,
+    WAITING_FOR_BETS,
+    WAITING_FOR_TRUMP,
+    WAITING_FOR_WINNER_MOVE,
+    WAITING_FOR_PLAYERS_MOVE,
+    ENDED
+}

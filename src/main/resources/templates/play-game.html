@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cards 250 Game</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Open+Sans:300&display=swap');
+
+        body {
+            background-color: #222;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Open Sans',sans-serif;
+            text-align: center;
+            color: #fff;
+        }
+
+        .text-line {
+            background-color: transparent;
+            color: #eeeeee;
+            outline: none;
+            outline-style: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            border-bottom: solid #eeeeee 1px;
+            padding: 3px 10px;
+            text-align: center;
+            font-size: 22px;
+            margin: 30px;
+        }
+
+        .main-container {
+            align-items: center;
+            width: 100%;
+            height: 100%;
+
+            display: grid;
+            grid-template-rows: 25% 40% auto;
+        }
+
+        .header {
+            font-size: 60px;
+        }
+
+        .status {
+            margin: 20px;
+        }
+
+        .trumpSuit {
+            font-size: 50px;
+        }
+
+        .card {
+            text-align:center;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin: 10px;
+            background-color: #222;
+        }
+
+        .card:hover {
+            border: 1px solid #c00;
+        }
+
+        .winner {
+            border: 2px solid #0c0;
+        }
+
+        #movesRow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        #cardsRow {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header"><h1>Cards 250</h1></div>
+        <div class="container">
+
+            <div class="status"><h2 id="statusText"></h2></div>
+
+            <div class="bets" style="display:none">
+                <div class="betStatus" style="margin:20px">
+                    <h3>Current highest bid: <span id="highestBid">160</span></h3>
+                </div>
+
+                <div class="betSetter">
+                    <div class="betSetterDiv">
+                        <input type="range" min="160" max="250" step="5" value="160" id="betSlider" style="margin:20px;width:40%"/>
+                    </div>
+
+                    <button class="btn btn-lg btn-secondary" id="betButton" onclick="processBet()">Bet <span id="betAmount">160</span></button>
+                    <button class="btn btn-lg btn-secondary" id="passBetButton" onclick="passBet()">Pass</button>
+                </div>
+            </div>
+
+            <div class="trump" style="margin:20px;display:none;">
+                <div>
+                    <h3>Choose trump:</h3>
+                </div>
+
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('SPADES')">♠</button>
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('CLUBS')">♣</button>
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('HEARTS')">♥</button>
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('DIAMONDS')">♦</button>
+            </div>
+
+            <div class="moves">
+                <div class="row" id="movesRow">
+
+                </div>
+
+                <div id="cardsText" style="display:none;margin:20px;"><h3>Your cards:</h3></div>
+
+                <div class="row" id="cardsRow">
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+
+    <script>
+        var localstore = window.localStorage;
+        var playerId = localstore.getItem("playerId");
+        var gameId = localstore.getItem("gameId");
+
+        var statusAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/status";
+        var betAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/bet/";
+        var trumpAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/trump/";
+        var moveAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/move/";
+        var curStatus = {};
+        var playerIndex;
+        var passedBet = false;
+
+        function init() {
+            $.get(statusAPI, function(data) {
+                curStatus = data;
+
+                // check status and redirect to correct method
+                console.log(data);
+
+                playerIndex = curStatus.playerIds.indexOf(playerId);
+                switch( data.state ) {
+                    case "WAITING_FOR_PLAYERS": waiting_players(); break;
+                    case "WAITING_FOR_BETS": waiting_bets(); break;
+                    case "WAITING_FOR_TRUMP": waiting_trump(); break;
+                    case "WAITING_FOR_WINNER_MOVE": waiting_winner_move(); break;
+                    case "WAITING_FOR_PLAYERS_MOVE": waiting_player_move(); break;
+                }
+            });
+        }
+
+        function processBet() {
+            $.get(betAPI + $("#betAmount").text(), function(data) {
+                console.log(data);
+            });
+        }
+
+        function passBet() {
+            $.get(betAPI + "pass", function(data) {
+                $("#betButton").attr("disabled", true);
+                $("#passBetButton").attr("disabled", true);
+                passedBet = true;
+                console.log(data);
+            });
+        }
+
+        function setTrump(suit) {
+            $.get(trumpAPI + suit, function(data) {
+                console.log(data);
+            });
+        }
+
+        function displayCurrentMoves(curMove) {
+            cards = curMove.card;
+            moveshtml = "";
+            cards.forEach( function(e, i) {
+                if( e == null ) {
+                    moveshtml = moveshtml + "<div class=\"card\"><h2>-</h2><p>Player " + (i+1) + "</div>";
+                } else {
+                    moveshtml = moveshtml + "<div class=\"card\"><h2>" + e + "</h2><p>Player " + (i+1) + "</div>";
+                }
+            });
+            $("#movesRow").html(moveshtml);
+        }
+
+        function move(element) {
+            var selectedCard = $($(element).children("h2")[0]).text()
+            var suit = selectedCard[ selectedCard.length - 1 ];
+            var face = selectedCard.replace( suit, "" );
+
+            switch( suit ) {
+                case "♠": suit = "SPADES"; break;
+                case "♣": suit = "CLUBS"; break;
+                case "♥": suit = "HEARTS"; break;
+                case "♦": suit = "DIAMONDS"; break;
+            }
+
+            switch( face ) {
+                case "5": face = "FIVE"; break;
+                case "7": face = "SEVEN"; break;
+                case "8": face = "EIGHT"; break;
+                case "9": face = "NINE"; break;
+                case "10": face = "TEN"; break;
+                case "J": face = "JACK"; break;
+                case "Q": face = "QUEEN"; break;
+                case "K": face = "KING"; break;
+                case "A": face = "ACE"; break;
+            }
+
+            moveFaceSuit( face, suit );
+        }
+
+        function moveFaceSuit(face, suit) {
+            $.get(moveAPI + face + "/" + suit, function(data) {
+                console.log(data);
+            });
+        }
+
+        function displayCardsForPlayer(cards) {
+            cardshtml = "";
+            cards.forEach( function(e, i) {
+                cardshtml = cardshtml + "<div class=\"card\" onclick=\"move(this);\"><h2>" + e + "</h2></div>";
+            });
+            $("#cardsRow").html(cardshtml);
+        }
+
+
+
+
+
+        function waiting_players() {
+            $("#statusText").text("Waiting for more players");
+        }
+
+        function waiting_bets() {
+            $(".bets").show();
+            $("#statusText").text("Waiting for bets");
+            $("#highestBid").text(curStatus.betAmount);
+            $("#betSlider").attr("min", curStatus.betAmount + 5);
+
+            if( playerId == curStatus.bettingPlayerId || passedBet) {
+                $("#betButton").attr("disabled", true);
+                $("#passBetButton").attr("disabled", true);
+            } else {
+                $("#betButton").attr("disabled", false);
+                $("#passBetButton").attr("disabled", false);
+            }
+        }
+
+        function waiting_trump() {
+            $(".bets").hide();
+            $("#statusText").text("Waiting for trump");
+
+            if( playerId == curStatus.bettingPlayerId ) {
+                $(".trump").show();
+            }
+        }
+
+        function waiting_winner_move() {
+            $(".bets").hide();
+            $(".trump").hide();
+            $(".moves").show();
+
+            curMove = curStatus.moves[curStatus.moves.length-1];
+            displayCurrentMoves(curMove);
+
+            if( playerIndex == curMove.previousWinner ) {
+                $("#cardsRow").show();
+                $("#cardsText").show();
+                $("#statusText").text("Your turn to move");
+                displayCardsForPlayer(curStatus.players[playerIndex].cards);
+            } else {
+                $("#cardsRow").hide();
+                $("#cardsText").hide();
+                $("#statusText").text("Waiting for winner's turn");
+            }
+        }
+
+        function waiting_player_move() {
+            $(".bets").hide();
+            $(".trump").hide();
+            $(".moves").show();
+
+            curMove = curStatus.moves[curStatus.moves.length-1];
+            displayCurrentMoves(curMove);
+
+            if( playerIndex == curMove.previousWinner ) {
+                $("#cardsRow").hide();
+                $("#cardsText").hide();
+                $("#statusText").text("Waiting for other's move");
+            } else {
+                $("#cardsRow").show();
+                $("#cardsText").show();
+                $("#statusText").text("Your turn to move");
+                displayCardsForPlayer(curStatus.players[playerIndex].cards);
+            }
+        }
+
+    </script>
+
+    <script>
+        var refreshIntervalId;
+        $(document).ready( function() {
+
+            $('#betSlider').bind('change mousedown mouseup',function(e){
+                $("#betAmount").text(e.target.value);
+            });
+            init();
+            window.setInterval( init, 1000 );
+        });
+    </script>
+</body>
+</html>
