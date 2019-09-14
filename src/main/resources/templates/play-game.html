@@ -80,6 +80,11 @@
             grid-template-columns: repeat(9, 1fr);;
         }
 
+        .pastMovesRow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
     </style>
 </head>
 <body>
@@ -126,6 +131,12 @@
 
                 </div>
 
+                <div id="pastMovesText" style="display:none;margin:20px;"><h3>Previous moves:</h3></div>
+
+                <div class="row" id="pastMovesRowHolder">
+
+                </div>
+
             </div>
 
         </div>
@@ -138,10 +149,10 @@
         var playerId = localstore.getItem("playerId");
         var gameId = localstore.getItem("gameId");
 
-        var statusAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/status";
-        var betAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/bet/";
-        var trumpAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/trump/";
-        var moveAPI = "http://127.0.0.1:8080/game/" + gameId + "/" + playerId + "/move/";
+        var statusAPI = "/game/" + gameId + "/" + playerId + "/status";
+        var betAPI = "/game/" + gameId + "/" + playerId + "/bet/";
+        var trumpAPI = "/game/" + gameId + "/" + playerId + "/trump/";
+        var moveAPI = "/game/" + gameId + "/" + playerId + "/move/";
         var curStatus = {};
         var playerIndex;
         var passedBet = false;
@@ -239,6 +250,28 @@
             $("#cardsRow").html(cardshtml);
         }
 
+        function displayPastMoves(moves) {
+            moveshtml = "";
+            moves.forEach( function(e, i) {
+                if( i == moves.length-1 ) {
+                    return;
+                }
+
+                $("#pastMovesText").show();
+                moveshtml += "<div class=\"col-md-12 pastMovesRow\">";
+                e.card.forEach( function( ce, ci) {
+                    moveshtml += "<div class=\"card ";
+                    if( e.winnerIndex == ci ) {
+                        moveshtml += "winner";
+                    }
+                    moveshtml += "\"><h2>" + ce + "</h2><p>Player "+ (ci+1) +"</div>";
+                });
+                moveshtml += "</div>";
+            });
+
+            $("#pastMovesRowHolder").html(moveshtml);
+        }
+
 
 
 
@@ -252,6 +285,10 @@
             $("#statusText").text("Waiting for bets");
             $("#highestBid").text(curStatus.betAmount);
             $("#betSlider").attr("min", curStatus.betAmount + 5);
+
+            $("#cardsRow").show();
+            $("#cardsText").show();
+            displayCardsForPlayer(curStatus.players[playerIndex].cards);
 
             if( playerId == curStatus.bettingPlayerId || passedBet) {
                 $("#betButton").attr("disabled", true);
@@ -268,6 +305,9 @@
 
             if( playerId == curStatus.bettingPlayerId ) {
                 $(".trump").show();
+                $("#cardsRow").show();
+                $("#cardsText").show();
+                displayCardsForPlayer(curStatus.players[playerIndex].cards);
             }
         }
 
@@ -278,6 +318,7 @@
 
             curMove = curStatus.moves[curStatus.moves.length-1];
             displayCurrentMoves(curMove);
+            displayPastMoves(curStatus.moves);
 
             if( playerIndex == curMove.previousWinner ) {
                 $("#cardsRow").show();
@@ -298,6 +339,7 @@
 
             curMove = curStatus.moves[curStatus.moves.length-1];
             displayCurrentMoves(curMove);
+            displayPastMoves(curStatus.moves);
 
             if( playerIndex == curMove.previousWinner ) {
                 $("#cardsRow").hide();

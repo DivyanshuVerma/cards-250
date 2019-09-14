@@ -67,7 +67,7 @@
     <script>
         function createParty() {
             var partyName = $("#partyName").val();
-            var createPartyAPI = "http://127.0.0.1:8080/party/" + partyName;
+            var createPartyAPI = "/party/" + partyName;
 
             $.get(createPartyAPI, function(data) {
                 console.log(data);
