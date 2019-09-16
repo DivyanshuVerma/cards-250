@@ -1,8 +1,27 @@
 FROM openjdk:12-alpine
 
-WORKDIR /tmp
-COPY jar/demo-1.0.jar /tmp/
+ENV GRADLE_VERSION 5.6.2
 
-ENTRYPOINT ["java","-jar","/tmp/demo-1.0.jar"]
+# get gradle and supporting libs
+RUN apk -U add --no-cache curl; \
+    curl https://downloads.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip > gradle.zip; \
+    unzip gradle.zip; \
+    rm gradle.zip; \
+    apk del curl; \
+    apk update && apk add --no-cache libstdc++ && rm -rf /var/cache/apk/*
+
+ENV PATH=${PATH}:/gradle-${GRADLE_VERSION}/bin
+
+COPY src /usr/src/games/src
+COPY build.gradle /usr/src/games
+COPY settings.gradle /usr/src/games
+
+WORKDIR /usr/src/games
+
+RUN ls
+RUN pwd
+RUN gradle build
+
+ENTRYPOINT ["gradle","bootRun"]
 
 EXPOSE 8080
