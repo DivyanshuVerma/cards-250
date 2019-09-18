@@ -31,6 +31,11 @@
 
     var latestConns = [];
     var connectionState = {};
+    var configuration = {
+        'iceServers': [{
+            'urls': 'stun:stun.l.google.com:19302'
+        }]
+    };
 
     function checkConnections() {
         $.get( connAPI, function(data) {
@@ -80,7 +85,7 @@
     }
 
     function createInitiatorPC(conn) {
-        var peerConn = new RTCPeerConnection();
+        var peerConn = new RTCPeerConnection(configuration);
         setPC( conn, peerConn );
 
         peerConn.onicecandidate = function(event) {
@@ -186,7 +191,7 @@
     }
 
     function createAcceptorAnswer(conn) {
-        var peerConn = new RTCPeerConnection();
+        var peerConn = new RTCPeerConnection(configuration);
         setPC( conn, peerConn );
 
         peerConn.onicecandidate = function(event) {
