@@ -1,5 +1,8 @@
 ## Skip distribution
 dist/
+build
+.idea
+.gradle
 
 ## Node gitignore
 

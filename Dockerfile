@@ -17,9 +17,6 @@ COPY build.gradle /usr/src/games
 COPY settings.gradle /usr/src/games
 
 WORKDIR /usr/src/games
-
-RUN ls
-RUN pwd
 RUN gradle build
 
 ENTRYPOINT ["gradle","bootRun"]
