@@ -123,6 +123,14 @@ public class PeerController {
     public ArrayList<Connection> listConnections() {
         return conns;
     }
+
+    @GetMapping("/peer/clear")
+    @ResponseBody
+    public String clearConnections() {
+        peers.clear();
+        conns.clear();
+        return "ok";
+    }
 }
 
 @Data
