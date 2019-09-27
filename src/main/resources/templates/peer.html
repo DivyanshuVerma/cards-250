@@ -1,457 +1,156 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Peer test</title>
+    <title>Cards 250 Game</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Open+Sans:300&display=swap');
+
+        body {
+            background-color: #222;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Open Sans',sans-serif;
+            text-align: center;
+            color: #fff;
+        }
+
+        .text-line {
+            background-color: transparent;
+            color: #eeeeee;
+            outline: none;
+            outline-style: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            border-bottom: solid #eeeeee 1px;
+            padding: 3px 10px;
+            text-align: center;
+            font-size: 22px;
+            margin: 30px;
+        }
+
+        .main-container {
+            align-items: center;
+            width: 100%;
+            height: 100%;
+
+            display: grid;
+            grid-template-rows: 25% 40% auto;
+        }
+
+        .header {
+            font-size: 60px;
+        }
+
+        .status {
+            margin: 20px;
+        }
+
+        .trumpSuit {
+            font-size: 50px;
+        }
+
+        .card {
+            text-align:center;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin: 10px;
+            background-color: #222;
+        }
+
+        .card-disabled {
+            color: #555;
+            border-color: #555;
+        }
+
+        .card:hover {
+            border: 1px solid #c00;
+        }
+
+        .winner {
+            border: 2px solid #0c0;
+        }
+
+        #movesRow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        #cardsRow {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);;
+        }
+
+        .pastMovesRow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+    </style>
 </head>
 <body>
-    <h1>I'm <span id="peerId" th:utext="${peerId}"></span></h1>
+    <div class="main-container">
+        <div class="header"><h1>Cards 250</h1></div>
+        <div class="container">
 
-    <div id="peerMessages">
+            <div class="status"><h2 id="statusText"></h2></div>
 
-    </div>
+            <div class="bets" style="display:none">
+                <div class="betStatus" style="margin:20px">
+                    <h3>Current highest bid: <span id="highestBid">160</span></h3>
+                </div>
 
-    <input type="text" id="message" width="200px" placeholder="message">
+                <div class="betSetter">
+                    <div class="betSetterDiv">
+                        <input type="range" min="160" max="250" step="5" value="160" id="betSlider" style="margin:20px;width:40%"/>
+                    </div>
 
-    <div id="peerButtons">
+                    <button class="btn btn-lg btn-secondary" id="betButton" onclick="processBet()">Bet <span id="betAmount">160</span></button>
+                    <button class="btn btn-lg btn-secondary" id="passBetButton" onclick="passBet()">Pass</button>
+                </div>
+            </div>
 
+            <div class="trump" style="margin:20px;display:none;">
+                <div>
+                    <h3>Choose trump:</h3>
+                </div>
+
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('♠')">♠</button>
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('♣')">♣</button>
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('♥')">♥</button>
+                <button class="btn btn-lg btn-secondary trumpSuit" onclick="setTrump('♦')">♦</button>
+            </div>
+
+            <div class="moves">
+                <div class="row" id="movesRow">
+
+                </div>
+
+                <div id="cardsText" style="display:none;margin:20px;"><h3>Your cards:</h3></div>
+
+                <div class="row" id="cardsRow">
+
+                </div>
+
+                <div id="pastMovesText" style="display:none;margin:20px;"><h3>Previous moves:</h3></div>
+
+                <div class="row" id="pastMovesRowHolder">
+
+                </div>
+
+            </div>
+
+        </div>
     </div>
 </body>
 
 <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
-<script>
-    var id = $("#peerId").text();
-    var listAPI = "/peer/list";
-    var connAPI = "/peer/" + id + "/connections";
-    var offerAPITemplate = "/peer/{initiator}/offer/{acceptor}";
-    var answerAPITemplate = "/peer/{acceptor}/answer/{initiator}";
-    var offerCandidateAPITemplate = "/peer/{initiator}/offerCandidate/{acceptor}";
-    var answerCandidateAPITemplate = "/peer/{acceptor}/answerCandidate/{initiator}";
-
-    var latestConns = [];
-    var connectionState = {};
-    var configuration = {
-        'iceServers': [{
-            'urls': 'stun:stun.l.google.com:19302'
-        }]
-    };
-
-    function checkConnections() {
-        $.get( connAPI, function(data) {
-            latestConns = data;
-            processConnections();
-        });
-    }
-
-    function processConnections() {
-        latestConns.forEach( function(e) {
-            if( id == e.initiator ) {
-                processInitiator(e);
-            } else {
-                processAcceptor(e);
-            }
-        });
-    }
-
-    function processInitiator(conn) {
-        var state = getState(conn);
-
-        switch( state ) {
-            case undefined:
-                if( getPC(conn) == undefined ) {
-                    createInitiatorPC(conn);
-                }
-
-                break;
-            case "WAITING_FOR_ANSWER":
-                if( conn.answer == undefined ) {
-                    break;
-                }
-
-                var pc = getPC(conn);
-                pc.setRemoteDescription(new RTCSessionDescription(conn.answer), function() {}, logError);
-                setState(conn, "WAITING_FOR_ANSWER_CANDIDATES");
-                break;
-            case "WAITING_FOR_ANSWER_CANDIDATES":
-                if( conn.answerCandidates == undefined || conn.answerCandidates.length == 0 ) {
-                    break;
-                }
-
-                addAcceptorCandidates(conn);
-                break;
-            case "READY_INITIATOR": break;
-        }
-    }
-
-    function createInitiatorPC(conn) {
-        var peerConn = new RTCPeerConnection(configuration);
-        setPC( conn, peerConn );
-
-        peerConn.onicecandidate = function(event) {
-            if( event.candidate != undefined ) {
-                console.log('cip icecandidate event:', event);
-                sendOfferCandidate(conn, event.candidate);
-            } else {
-                console.log("cip end of candidates");
-                sendOfferCandidate(conn, { candidate: "EOF" });
-            }
-        };
-
-        var dataChannel = peerConn.createDataChannel(getStateId(conn));
-        setDC(conn, dataChannel);
-        dataChannel.onopen = function() {
-            console.log('CHANNEL opened!!! for ', conn.acceptor);
-
-            var button = document.createElement("button");
-            button.id = "send" + conn.acceptor;
-            button.innerHTML = "Send to " + conn.acceptor;
-            button.onclick = function() {
-                console.log(conn.acceptor, " send clicked");
-                var msg = $("#message").val();
-                dataChannel.send(msg);
-                $("#peerMessages").append("<p>You -> " + msg + "</p>");
-            };
-            document.getElementById("peerButtons").appendChild(button);
-        };
-
-        dataChannel.onclose = function() {
-            console.log('Channel closed.');
-        }
-
-        dataChannel.onmessage = function(event) {
-            console.log('Got message!!!: ', event);
-            $("#peerMessages").append("<p>" + conn.acceptor + " -> " + event.data + "</p>");
-        }
-
-        peerConn.createOffer( function(desc) {
-            console.log('local session created:', desc);
-            peerConn.setLocalDescription(desc, function() {
-                console.log('sending local desc:', peerConn.localDescription);
-                sendOffer(conn, peerConn.localDescription);
-                setState(conn, "WAITING_FOR_ANSWER");
-            }, logError);
-        }, logError);
-    }
-
-    function addAcceptorCandidates(conn) {
-        var candidates = conn.answerCandidates;
-        var aci = getAnswerCandidatesIndex(conn);
-
-        if( aci == undefined ) {
-            aci = 0;
-        }
-
-        for( ; aci < candidates.length; aci++ ) {
-            var candidate = candidates[aci];
-
-            if( candidate.candidate == "EOF" ) {
-                setState(conn, "READY_INITIATOR");
-                break;
-            }
-
-            getPC(conn).addIceCandidate( new RTCIceCandidate(candidate) );
-            console.log("cip candidate added", candidate);
-        }
-
-        setAnswerCandidatesIndex(conn, aci);
-    }
-
-    function processAcceptor(conn) {
-        var state = getState(conn);
-
-        switch( state ) {
-            case undefined:
-            case "WAITING_FOR_OFFER":
-                if( conn.offer == undefined ) {
-                    setState(conn, "WAITING_FOR_OFFER");
-                    break;
-                }
-
-                if( conn.answer == undefined ) {
-                    createAcceptorAnswer(conn);
-                    break;
-                }
-
-                break;
-            case "WAITING_FOR_OFFER_CANDIDATES":
-                if( conn.offerCandidates == undefined || conn.offerCandidates.length == 0 ) {
-                    break;
-                }
-
-                addInitiatorCandidates(conn);
-                break;
-            case "READY_ACCEPTOR":
-                var dc = getDC(conn);
-                if( dc != undefined ) {
-                    dc.send("hi from acceptor");
-                }
-                break;
-        }
-    }
-
-    function createAcceptorAnswer(conn) {
-        var peerConn = new RTCPeerConnection(configuration);
-        setPC( conn, peerConn );
-
-        peerConn.onicecandidate = function(event) {
-            if( event.candidate != undefined ) {
-                console.log('caa icecandidate event:', event);
-                sendAnswerCandidate(conn, event.candidate);
-            } else {
-                console.log("caa end of candidates");
-                sendAnswerCandidate(conn, { candidate: "EOF"} );
-            }
-        };
-
-        peerConn.ondatachannel = function(event) {
-            console.log('caa ondatachannel:', event.channel);
-            dataChannel = event.channel;
-            setDC(conn, dataChannel);
-
-            dataChannel.onopen = function() {
-                console.log('caa CHANNEL opened!!! for ', conn.initiator);
-
-                var button = document.createElement("button");
-                button.id = "send" + conn.initiator;
-                button.innerHTML = "Send to " + conn.initiator;
-                button.onclick = function() {
-                    console.log(conn.initiator, " send clicked");
-                    var msg = $("#message").val();
-                    dataChannel.send(msg);
-                    $("#peerMessages").append("<p>You -> " + msg + "</p>");
-                };
-                document.getElementById("peerButtons").appendChild(button);
-            };
-
-            dataChannel.onclose = function() {
-                console.log('caa Channel closed.');
-            }
-
-            dataChannel.onmessage = function(event) {
-                console.log('Got message!!!: ', event);
-                $("#peerMessages").append("<p>" + conn.initiator + " -> " + event.data + "</p>");
-            }
-        };
-
-        var offerMsg = conn.offer;
-        peerConn.setRemoteDescription(new RTCSessionDescription(offerMsg), function() {}, logError);
-        peerConn.createAnswer( function(desc) {
-            console.log('caa local session created:', desc);
-            peerConn.setLocalDescription(desc, function() {
-                console.log('caa sending local desc:', peerConn.localDescription);
-                sendAnswer(conn, peerConn.localDescription);
-                setState(conn, "WAITING_FOR_OFFER_CANDIDATES");
-            }, logError);
-        }, logError);
-    }
-
-    function addInitiatorCandidates(conn) {
-        var candidates = conn.offerCandidates;
-        var oci = getOfferCandidatesIndex(conn);
-
-        if( oci == undefined ) {
-            oci = 0;
-        }
-
-        for( ; oci < candidates.length; oci++ ) {
-            var candidate = candidates[oci];
-
-            if( candidate.candidate == "EOF" ) {
-                setState(conn, "READY_ACCEPTOR");
-                break;
-            }
-
-            getPC(conn).addIceCandidate( new RTCIceCandidate(candidate) );
-            console.log("caa candidate added", candidate);
-        }
-
-        setOfferCandidatesIndex(conn, oci);
-    }
-
-    function sendOffer(conn, offerData) {
-        $.ajax({
-            url: getOfferAPI(conn),
-            type: "POST",
-            data: JSON.stringify(offerData.toJSON()),
-            contentType: "application/json; charset=UTF-8",
-            success: function(data) {
-                console.log("offer call result: ", data);
-            },
-            error: logError
-        });
-    }
-
-    function sendAnswer(conn, answerData) {
-        $.ajax({
-            url: getAnswerAPI(conn),
-            type: "POST",
-            data: JSON.stringify(answerData.toJSON()),
-            contentType: "application/json; charset=UTF-8",
-            success: function(data) {
-                console.log("answer call result: ", data);
-            },
-            error: logError
-        });
-    }
-
-    function sendOfferCandidate(conn, candidate) {
-        $.ajax({
-            url: getOfferCandidateAPI(conn),
-            type: "POST",
-            data: JSON.stringify(candidate),
-            contentType: "application/json; charset=UTF-8",
-            success: function(data) {
-                console.log("offer candidate call result: ", data);
-            },
-            error: logError
-        });
-    }
-
-    function sendAnswerCandidate(conn, candidate) {
-        $.ajax({
-            url: getAnswerCandidateAPI(conn),
-            type: "POST",
-            data: JSON.stringify(candidate),
-            contentType: "application/json; charset=UTF-8",
-            success: function(data) {
-                console.log("answer candidate call result: ", data);
-            },
-            error: logError
-        });
-    }
-
-    function getOfferAPI(conn) {
-        return replaceInitiatorAcceptor(conn, offerAPITemplate);
-    }
-
-    function getAnswerAPI(conn) {
-        return replaceInitiatorAcceptor(conn, answerAPITemplate);
-    }
-
-    function getOfferCandidateAPI(conn) {
-        return replaceInitiatorAcceptor(conn, offerCandidateAPITemplate);
-    }
-
-    function getAnswerCandidateAPI(conn) {
-        return replaceInitiatorAcceptor(conn, answerCandidateAPITemplate);
-    }
-
-    function replaceInitiatorAcceptor(conn, url) {
-        return url.replace("{initiator}", conn.initiator).replace("{acceptor}", conn.acceptor);
-    }
-
-    function getOfferCandidatesIndex(conn) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            return undefined;
-        }
-
-        return connectionState[connId].oci;
-    }
-
-    function setOfferCandidatesIndex(conn, index) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            connectionState[connId] = { "oci": index };
-            return;
-        }
-
-        connectionState[connId].oci = index;
-    }
-
-    function getAnswerCandidatesIndex(conn) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            return undefined;
-        }
-
-        return connectionState[connId].aci;
-    }
-
-    function setAnswerCandidatesIndex(conn, index) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            connectionState[connId] = { "aci": index };
-            return;
-        }
-
-        connectionState[connId].aci = index;
-    }
-
-    function getDC(conn) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            return undefined;
-        }
-
-        return connectionState[connId].dc;
-    }
-
-    function setDC(conn, dc) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            connectionState[connId] = { "dc": dc };
-            return;
-        }
-
-        connectionState[connId].dc = dc;
-    }
-
-    function getPC(conn) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            return undefined;
-        }
-
-        return connectionState[connId].pc;
-    }
-
-    function setPC(conn, pc) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            connectionState[connId] = { "pc": pc };
-            return;
-        }
-
-        connectionState[connId].pc = pc;
-    }
-
-    function getState(conn) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            return undefined;
-        }
-
-        return connectionState[connId].state;
-    }
-
-    function setState(conn, state) {
-        var connId = getStateId(conn);
-        if( connectionState[connId] == undefined ) {
-            connectionState[connId] = { "state": state };
-            return;
-        }
-
-        connectionState[connId].state = state;
-    }
-
-    function getStateId(conn) {
-        return conn.initiator + ">" + conn.acceptor;
-    }
-
-    function logError(err) {
-        if (!err) return;
-        if (typeof err === 'string') {
-            console.warn(err);
-        } else {
-            console.warn(err.toString(), err);
-        }
-    }
-
-    $(document).ready( function() {
-        window.setInterval(checkConnections, 5000);
-    });
-
-</script>
+<script src="/js/peerConnection.js"></script>
+<script src="/js/signalling.js"></script>
+<script src="/js/game.js"></script>
+<script src="/js/init.js"></script>
 </html>
