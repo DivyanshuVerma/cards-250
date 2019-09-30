@@ -11,7 +11,7 @@ function processConnections(partyName, id, latestConns) {
     latestConns.forEach( function(conn) {
         var connId = getId(conn);
         if( connectionState[connId] == undefined ) {
-            connectionState[connId] = {};
+            connectionState[connId] = { initiator: conn.initiator, acceptor: conn.acceptor };
         }
 
         if( id == conn.initiator ) {
@@ -22,6 +22,8 @@ function processConnections(partyName, id, latestConns) {
             allReady = allReady && (connectionState[connId].state == "READY_ACCEPTOR")
         }
     });
+
+    displayCurrentPeers(id, connectionState);
 
     return allReady;
 }

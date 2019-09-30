@@ -4,54 +4,26 @@ var offerCandidateAPITemplate = "/party/{partyName}/peer/{initiator}/offerCandid
 var answerCandidateAPITemplate = "/party/{partyName}/peer/{acceptor}/answerCandidate/{initiator}";
 
 function sendOffer(partyName, conn, offerData) {
-    $.ajax({
-        url: getOfferAPI(partyName, conn),
-        type: "POST",
-        data: JSON.stringify(offerData.toJSON()),
-        contentType: "application/json; charset=UTF-8",
-        success: function(data) {
-            console.log("offer call result: ", data);
-        },
-        error: logError
+    post_request( getOfferAPI(partyName, conn), JSON.stringify(offerData.toJSON()), function(data) {
+        console.log("offer call result: ", data);
     });
 }
 
 function sendAnswer(partyName, conn, answerData) {
-    $.ajax({
-        url: getAnswerAPI(partyName, conn),
-        type: "POST",
-        data: JSON.stringify(answerData.toJSON()),
-        contentType: "application/json; charset=UTF-8",
-        success: function(data) {
-            console.log("answer call result: ", data);
-        },
-        error: logError
+    post_request( getAnswerAPI(partyName, conn), JSON.stringify(answerData.toJSON()), function(data) {
+        console.log("answer call result: ", data);
     });
 }
 
 function sendOfferCandidate(partyName, conn, candidate) {
-    $.ajax({
-        url: getOfferCandidateAPI(partyName, conn),
-        type: "POST",
-        data: JSON.stringify(candidate),
-        contentType: "application/json; charset=UTF-8",
-        success: function(data) {
-            console.log("offer candidate call result: ", data);
-        },
-        error: logError
+    post_request( getOfferCandidateAPI(partyName, conn), JSON.stringify(candidate), function(data) {
+        console.log("offer candidate call result: ", data);
     });
 }
 
 function sendAnswerCandidate(partyName, conn, candidate) {
-    $.ajax({
-        url: getAnswerCandidateAPI(partyName, conn),
-        type: "POST",
-        data: JSON.stringify(candidate),
-        contentType: "application/json; charset=UTF-8",
-        success: function(data) {
-            console.log("answer candidate call result: ", data);
-        },
-        error: logError
+    post_request( getAnswerCandidateAPI(partyName, conn), JSON.stringify(candidate), function(data) {
+        console.log("answer candidate call result: ", data);
     });
 }
 

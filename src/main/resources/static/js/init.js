@@ -1,13 +1,42 @@
 var localstore = window.localStorage;
 var partyName = localstore.getItem("partyName");
 var peerId = localstore.getItem("peerId");
+
 var serverPollingId;
 var peerPollingId;
 
 var connAPI = "/party/" + partyName + "/peer/" + peerId + "/connections";
 
+function get_request(url, callback) {
+    var request = new XMLHttpRequest();
+
+    request.onreadystatechange = function() {
+        if (request.readyState == 4 && request.status == 200) {
+            callback(JSON.parse(request.responseText));
+        }
+    }
+
+    request.open("GET", url);
+    request.send();
+}
+
+function post_request(url, data, callback) {
+    var request = new XMLHttpRequest();
+
+    request.onreadystatechange = function() {
+        if (request.readyState == 4 && request.status == 200) {
+            callback(request.responseText);
+        }
+    }
+
+    request.open('POST', url);
+    request.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+    request.send(data);
+}
+
+
 function checkConnections() {
-    $.get( connAPI, function(data) {
+    get_request(connAPI, function(data) {
         var partyFull = processConnections(partyName, peerId, data);
 
         if( partyFull ) {
@@ -34,7 +63,7 @@ var sentKeys = false;
 function processPeers() {
     window.clearInterval(serverPollingId);
     updateStatusText("Ordering players");
-    peerPollingId = window.setInterval(checkPeerMessages, 1000);
+    peerPollingId = window.setInterval(checkPeerMessages, 500);
     console.log("all ready");
 }
 
@@ -230,15 +259,14 @@ function decryptOwnPack() {
 }
 
 function processCards() {
+    var statusWrapper = document.getElementById("status-wrap");
+    statusWrapper.className += " with-action";
+
     gameState = "WAITING_PEER_BETS";
-    if( selfOrder == 0 ) {
-        waiting_bets( 160, myCards, true, false );
-    } else {
-        waiting_bets( 160, myCards, false, false );
-    }
+    waiting_bets( 155, myCards, 0 );
 }
 
-var peerBets = [{passedBet: false}, {passedBet: false}, {passedBet: false}, {betAmount:160, passedBet: false}];
+var peerBets = [{passedBet: false}, {passedBet: false}, {passedBet: false}, {passedBet: false}];
 var trumpSuit;
 var trumpWinner;
 var moves = [ { cards: [] } ];
@@ -255,14 +283,17 @@ function waiting_peer_bets(msg) {
 
     if( passedBetsCount == 3 ) {
         gameState = "WAITING_FOR_TRUMP";
-        waiting_trump(selfOrder == highestBetPeer, myCards);
-    } else {
-        var nextOrder = (from+1)%orderedPeers.length;
-        if( selfOrder == nextOrder ) {
-            waiting_bets( highestBet, myCards, true, peerBets[selfOrder].passedBet );
+
+        // In case there is not even a single bet, this last peer will become winner
+        if( highestBetPeer != undefined ) {
+            waiting_bets( null, myCards, highestBetPeer );
+            waiting_trump(selfOrder == highestBetPeer, myCards);
         } else {
-            waiting_bets( highestBet, myCards, false, peerBets[selfOrder].passedBet );
+            waiting_bets( null, myCards, selfOrder );
+            waiting_trump(true, myCards);
         }
+    } else {
+        waiting_bets( highestBet, myCards, getNextBettingPeer(from) );
     }
 }
 
@@ -290,18 +321,28 @@ function checkPassedCount(bets) {
     return passedBetsCount;
 }
 
+function getNextBettingPeer(from) {
+    var nextOrder;
+    for( index=1; index<orderedPeers.length; index++ ) {
+        nextOrder = (from+index)%orderedPeers.length;
+        if( ! peerBets[nextOrder].passedBet ) {
+            break;
+        }
+    }
+
+    return nextOrder;
+}
+
 function processBet() {
-    var myBet = parseInt($("#betAmount").text());
+    var myBet = parseInt(document.getElementById("betAmount").textContent);
     peerBets[selfOrder] = { betAmount: myBet, passedBet: false };
     broadcastAfterOrdering( peerBets[selfOrder] );
-    waiting_bets( myBet, myCards, false, false );
+    waiting_bets( myBet, myCards, getNextBettingPeer(selfOrder) );
 }
 
 function passBet() {
     peerBets[selfOrder] = { passedBet: true };
     broadcastAfterOrdering( peerBets[selfOrder] );
-    $("#betButton").attr("disabled", true);
-    $("#passBetButton").attr("disabled", true);
 
     // check if this is the last pass
     var passedBetsCount = checkPassedCount(peerBets);
@@ -309,143 +350,131 @@ function passBet() {
         gameState = "WAITING_FOR_TRUMP";
 
         var top = checkHighestBet(peerBets);
+        waiting_bets( null, myCards, top.peer );
         waiting_trump(selfOrder == top.peer, myCards);
+    } else {
+        waiting_bets( null, myCards, getNextBettingPeer(selfOrder) );
     }
 }
 
 function waiting_peer_trump(msg) {
     trumpSuit = msg.trump;
     trumpWinner = msg.from;
+
+    moves[0].firstMove = trumpWinner;
+    moves[0].waiting = trumpWinner;
     gameState = "WAITING_FOR_WINNER_MOVE";
-    waiting_winner_move(myCards, moves, false, false);
+    waiting_winner_move(myCards, moves);
 }
 
 function setTrump(suit) {
     trumpSuit = suit;
     trumpWinner = selfOrder;
+
+    moves[0].firstMove = trumpWinner;
+    moves[0].waiting = trumpWinner;
     broadcastAfterOrdering( { trump: suit } );
     gameState = "WAITING_FOR_WINNER_MOVE";
-    waiting_winner_move(myCards, moves, true, true);
+    waiting_winner_move(myCards, moves);
 }
 
 function waiting_for_peer_winner_move(msg) {
-    var from = msg.from;
-    var card = msg.card;
-
-    var curMoves = moves[ moves.length-1 ];
-    var curCards = curMoves.cards;
-    curCards[from] = card;
+    var updatedCards = updateHandCards(myCards, moves, msg.from, msg.card);
 
     // check if everyone has moved
-    if( (curCards[0] && curCards[1] && curCards[2] && curCards[3]) != undefined ) {
-        console.log("Everyone has moved");
-
-        // check winner and it will be his turn
-        var firstMove = getPreviousWinner(moves, trumpWinner);
-        var stats = getCurrentStats(curCards, firstMove, trumpSuit);
-        curMoves.winner = stats.winner;
-        curMoves.score = stats.score;
-
-        if( myCards.length == 0 ) {
-            var scores = getCumulativeScores(moves);
-            console.log(scores);
-
-            var gameWinner = 0;
-            var gameScore = scores[0];
-            for(i=1; i<scores.length; i++) {
-                if( scores[i] > gameScore ) {
-                    gameWinner = i;
-                    gameScore = scores[i];
-                }
-            }
-
-            if( selfOrder == gameWinner ) {
-                console.log("You won this game!");
-                updateStatusText("You won this game with a score of " + gameScore);
-            } else {
-                console.log("Player", gameWinner, "won this game!");
-                updateStatusText("Player", gameWinner, "won this game with a score of " + gameScore);
-            }
-        } else {
-            moves.push({ cards: [] });
-            if( selfOrder == curMoves.winner ) {
-                console.log("Won this round");
-                // update ui
-                waiting_winner_move(myCards, moves, true, true);
-            } else {
-                // other won but update ui
-                waiting_winner_move(myCards, moves, false, false);
-            }
-        }
+    if( checkAllMoved(updatedCards) ) {
+        processMove(myCards, moves);
     } else {
-        // check if you have to move
-        var nextOrder = (from+1)%orderedPeers.length;
-        if( selfOrder == nextOrder ) {
-            // my turn, update ui
-            waiting_winner_move(myCards, moves, false, true);
-        } else {
-            waiting_winner_move(myCards, moves, false, false);
-        }
+        waiting_winner_move(myCards, moves);
     }
 }
 
-function move(element) {
-    var selectedCard = $($(element).children("h2")[0]).text();
-
-    var curMoves = moves[ moves.length-1 ];
-    var curCards = curMoves.cards;
-    curCards[selfOrder] = selectedCard;
-    broadcastAfterOrdering( { card: selectedCard } );
-
-    // remove card
-    var removeIndex = myCards.indexOf(selectedCard);
-    myCards.splice(removeIndex, 1);
+function move(selectedCard) {
+    var updatedCards = updateHandCards(myCards, moves, selfOrder, selectedCard)
 
     // check if everyone has moved
-    if( (curCards[0] && curCards[1] && curCards[2] && curCards[3]) != undefined ) {
-        console.log("Everyone has moved");
-
-        // check if you are the winner and it will be your turn
-        var firstMove = getPreviousWinner(moves, trumpWinner);
-        var stats = getCurrentStats(curCards, firstMove, trumpSuit);
-        curMoves.winner = stats.winner;
-        curMoves.score = stats.score;
-
-        if( myCards.length == 0 ) {
-            var scores = getCumulativeScores(moves);
-            console.log(scores);
-
-            var gameWinner = 0;
-            var gameScore = scores[0];
-            for(i=1; i<scores.length; i++) {
-                if( scores[i] > gameScore ) {
-                    gameWinner = i;
-                    gameScore = scores[i];
-                }
-            }
-
-            if( selfOrder == gameWinner ) {
-                console.log("You won this game!");
-                updateStatusText("You won this game with a score of " + gameScore);
-            } else {
-                console.log("Player", gameWinner, "won this game!");
-                updateStatusText("Player", gameWinner, "won this game with a score of " + gameScore);
-            }
-        } else {
-            moves.push({ cards: [] });
-            if( selfOrder == curMoves.winner ) {
-                console.log("won this round");
-                // update ui
-                waiting_winner_move(myCards, moves, true, true);
-            } else {
-                waiting_winner_move(myCards, moves, false, false);
-            }
-        }
+    if( checkAllMoved(updatedCards) ) {
+        processMove(myCards, moves);
     } else {
         // update ui with my move
-        waiting_winner_move(myCards, moves, false, false);
+        waiting_winner_move(myCards, moves);
     }
 }
+
+function updateHandCards(cards, moves, from, selectedCard) {
+    var curMove = moves[ moves.length-1 ];
+    curMove.cards[from] = selectedCard;
+    curMove.waiting = (from+1)%orderedPeers.length;
+
+    if( from == selfOrder ) {
+        broadcastAfterOrdering( { card: selectedCard } );
+
+        // remove card
+        var removeIndex = cards.indexOf(selectedCard);
+        cards.splice(removeIndex, 1);
+    }
+
+    return curMove.cards;
+}
+
+function checkAllMoved(cards) {
+    return (cards[0] && cards[1] && cards[2] && cards[3] ) != undefined;
+}
+
+function processMove(cards, moves) {
+    console.log("Everyone has moved");
+
+    processMoveStats(moves);
+
+    if( cards.length == 0 ) {
+        processGameEnded(moves);
+    } else {
+        finalizeMove(cards, moves);
+    }
+}
+
+function processMoveStats(moves) {
+    var curMove = moves[moves.length-1];
+    var stats = getCurrentStats(curMove.cards, curMove.firstMove, trumpSuit);
+    curMove.winner = stats.winner;
+    curMove.score = stats.score;
+}
+
+function finalizeMove(cards, moves) {
+    var winner = moves[moves.length-1].winner;
+    moves.push({ cards: [], firstMove: winner, waiting: winner });
+    waiting_winner_move(cards, moves);
+}
+
+function processGameEnded(moves) {
+    displayEndGame(moves);
+    var scores = getCumulativeScores(moves);
+    console.log(scores);
+
+    var game = getGameWinner(scores);
+
+    if( selfOrder == game.winner ) {
+        console.log("You won this game!");
+        updateStatusText("You won this game with a score of " + game.score);
+    } else {
+        console.log("Player", game.winner, "won this game!");
+        updateStatusText(orderedPeers[game.winner].id + " won this game with a score of " + game.score);
+    }
+}
+
+function getGameWinner(scores) {
+    var gameWinner = 0;
+    var gameScore = scores[0];
+    for(i=1; i<scores.length; i++) {
+        if( scores[i] > gameScore ) {
+            gameWinner = i;
+            gameScore = scores[i];
+        }
+    }
+
+    return {winner: gameWinner, score: gameScore};
+}
+
 
 function getCumulativeScores(moves) {
     var scores = [0, 0, 0, 0];
@@ -457,17 +486,7 @@ function getCumulativeScores(moves) {
     return scores;
 }
 
-function getPreviousWinner(moves, trumpWinner) {
-    if (moves.length == 1) {
-        return trumpWinner;
-    }
-
-    return moves[ moves.length-2 ].winner;
-}
-
 function getCurrentStats(cards, firstMove, trumpSuit) {
-    // need to define exact logic
-
     var firstCard = cards[firstMove];
     var firstFace = firstCard[0];
     var firstSuit = firstCard[firstCard.length-1];
@@ -635,10 +654,8 @@ function encryptPackForDistributing(shuffledPack) {
     return shuffledPack;
 }
 
-$(document).ready( function() {
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById("idHolder").textContent = peerId;
     updateStatusText("Checking party");
     serverPollingId = window.setInterval(checkConnections, 2500);
-    $('#betSlider').bind('change mousedown mouseup',function(e){
-        $("#betAmount").text(e.target.value);
-    });
 });
