@@ -180,16 +180,20 @@ function displayCardsForPlayer(cards, uiDisabled, onclickDisabled, trumpSuit, fi
         var cardElement;
         if( firstSuit == undefined ) {
             cardElement = createCardElement(card, uiDisabled, trumpSuit);
+
+            if( !onclickDisabled ) {
+                cardElement.setAttribute("onclick", "move('" + card + "');")
+            }
         } else {
             if( !firstSuitPresent || (firstSuitPresent && suit == firstSuit) ) {
                 cardElement = createCardElement(card, uiDisabled, trumpSuit);
+
+                if( !onclickDisabled ) {
+                    cardElement.setAttribute("onclick", "move('" + card + "');")
+                }
             } else {
                 cardElement = createCardElement(card, true, trumpSuit);
             }
-        }
-
-        if( !onclickDisabled ) {
-            cardElement.setAttribute("onclick", "move('" + card + "');")
         }
 
         cardsElement.appendChild(cardElement);
