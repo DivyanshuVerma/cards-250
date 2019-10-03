@@ -21,7 +21,7 @@
         <div class="g-signin2" style="margin-left: calc(50% - 60px);" data-onsuccess="onSignIn"></div>
         <div><h2>to remember scores</h2></div>
         <div><h2>Or</h2></div>
-        <div class="button button-secondary button-shrink">Join as ThreadyTomato</div>
+        <div class="button button-secondary button-shrink" onclick="anonymousSignIn()">Join as <span id="gamerTag">ThreadyTomato</span></div>
     </div>
 
     <div class="wrapper wp-connect" id="connectRow" style="display:none;">
@@ -85,17 +85,6 @@
 <script src="/js/signalling.js"></script>
 <script src="/js/game.js"></script>
 <script src="/js/init.js"></script>
-
-<script>
-    function onSignIn(googleUser) {
-      var profile = googleUser.getBasicProfile();
-      console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
-      console.log('Name: ' + profile.getName());
-      console.log('Image URL: ' + profile.getImageUrl());
-      console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
-      console.log(googleUser);
-    }
-</script>
 
 <script>
   function signOut() {

@@ -1,5 +1,6 @@
 var partyName;
 var peerId;
+var id_token;
 
 var serverPollingId;
 var peerPollingId;
@@ -660,6 +661,13 @@ function createParty() {
     var createPartyAPI = "/party/" + partyName;
     var errorPrefix = "err:";
 
+    if(id_token != undefined) {
+        createPartyAPI += "?id_token=" + id_token;
+    } else if (peerId != undefined) {
+        createPartyAPI += "?peerId=" + peerId;
+    }
+
+    console.log(createPartyAPI);
     get_request( createPartyAPI, function(data) {
         console.log("creating party", data);
 
@@ -680,4 +688,29 @@ function createParty() {
 
         serverPollingId = window.setInterval(checkConnections, 2500);
     });
+}
+
+function onSignIn(googleUser) {
+    var profile = googleUser.getBasicProfile();
+    console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+    console.log('Name: ' + profile.getName());
+    console.log('Image URL: ' + profile.getImageUrl());
+    console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+    console.log(googleUser);
+
+    id_token = googleUser.getAuthResponse().id_token;
+    console.log("id_token", id_token);
+    peerId = profile.getName().replace(" ", "_");
+    document.getElementById("idHolder").textContent = peerId;
+    showElementById("id-icon-div");
+    hideElementById("signinRow");
+    showElementById("connectRow");
+}
+
+function anonymousSignIn() {
+    peerId = document.getElementById("gamerTag").textContent;
+    document.getElementById("idHolder").textContent = peerId;
+    showElementById("id-icon-div");
+    hideElementById("signinRow");
+    showElementById("connectRow");
 }

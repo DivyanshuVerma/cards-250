@@ -55,7 +55,9 @@ public class GameController {
 
     @GetMapping("/party/{partyName}")
     @ResponseBody
-    public Map<String, String> createOrJoinParty(@PathVariable String partyName) {
+    public Map<String, String> createOrJoinParty(@PathVariable String partyName,
+                                                 @RequestParam(value = "peerId", required = false) String peerId,
+                                                 @RequestParam(value = "id_token", required = false) String idToken) {
         log.info("Got request for party {}", partyName);
 
         if( party.containsKey(partyName) && party.get(partyName).size() >= 4 ) {
@@ -68,7 +70,14 @@ public class GameController {
             return Collections.singletonMap("err", "Party name should satisfy " + PARTY_NAME_REGEX);
         }
 
-        String newPeer = uuidUtil.base64();
+        log.info("Parameters received: peerId {} id_token {}", peerId, idToken);
+
+        // authenticate
+        String newPeer = peerId;
+        if( newPeer == null ) {
+            newPeer = uuidUtil.base64();
+        }
+
         if( ! party.containsKey(partyName) ) {
             log.info("Creating party {} for peer {}", partyName, newPeer);
             party.put(partyName, new HashMap<>());
