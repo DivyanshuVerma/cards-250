@@ -67,6 +67,13 @@ div {
 
 
 
+.wp-sign-in {
+    display: grid;
+    grid-template: auto / 1fr;
+    height: 75vh;
+    align-content: center;
+}
+
 .wp-connect {
     display: grid;
     grid-template: repeat(4, 1fr) / repeat(4, 1fr);
@@ -86,7 +93,7 @@ div {
     text-align: center;
     font-size: 22px;
     margin: 30px;
-    width: 60%;
+    width: 30%;
 }
 
 .partyInput {
@@ -180,6 +187,10 @@ div {
     padding-bottom: 25px;
 
     overflow: hidden;
+}
+
+.button-shrink {
+    justify-self: center;
 }
 
 .button:disabled {

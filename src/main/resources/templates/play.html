@@ -4,33 +4,33 @@
     <meta charset="UTF-8">
     <title>Cards 250 Game</title>
     <link href="/css/core.css" rel="stylesheet" />
+    <meta name="google-signin-client_id" content="208275649900-a0g0jg54bhnttbnstsajunffutffo1nv.apps.googleusercontent.com">
 </head>
 <body>
 
     <div class="wrapper wp-header">
         <div class="header">
-            <div class="page-title">
-                <h1>Cards 250</h1>
-            </div>
-            <div class="id-icon" id="id-icon-div" style="display:none;">
-                <h3 id="idHolder"></h3>
-            </div>
-            <div class="help-icon">
-                <h3>How to play?</h3>
-            </div>
+            <div class="page-title"><h1>Cards 250</h1></div>
+            <div class="id-icon" id="id-icon-div" style="display:none;"><h3 id="idHolder"></h3></div>
+            <div class="help-icon"><h3>How to play?</h3></div>
             <div class="header-hr"><hr/></div>
         </div>
     </div>
 
-    <div class="wrapper wp-connect" id="connectRow">
+    <div class="wrapper wp-sign-in" id="signinRow">
+        <div class="g-signin2" style="margin-left: calc(50% - 60px);" data-onsuccess="onSignIn"></div>
+        <div><h2>to remember scores</h2></div>
+        <div><h2>Or</h2></div>
+        <div class="button button-secondary button-shrink">Join as ThreadyTomato</div>
+    </div>
+
+    <div class="wrapper wp-connect" id="connectRow" style="display:none;">
         <div class="partyInput">
             <input type="text" class="text-line" id="partyName" value="orange" placeholder="Enter a dictionary word to remember easily!"/>
         </div>
         <div class="create">
             <button class="button button-primary" onclick="createParty()">Create/Join party!</button>
-            <div class="errorText">
-                <h3 id="errorText"></h3>
-            </div>
+            <div class="errorText"><h3 id="errorText"></h3></div>
         </div>
     </div>
 
@@ -80,9 +80,30 @@
     </div>
 
 </body>
-
+<script src="https://apis.google.com/js/platform.js" async defer></script>
 <script src="/js/peerConnection.js"></script>
 <script src="/js/signalling.js"></script>
 <script src="/js/game.js"></script>
 <script src="/js/init.js"></script>
+
+<script>
+    function onSignIn(googleUser) {
+      var profile = googleUser.getBasicProfile();
+      console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+      console.log('Name: ' + profile.getName());
+      console.log('Image URL: ' + profile.getImageUrl());
+      console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+      console.log(googleUser);
+    }
+</script>
+
+<script>
+  function signOut() {
+    var auth2 = gapi.auth2.getAuthInstance();
+    auth2.signOut().then(function () {
+      console.log('User signed out.');
+    });
+  }
+</script>
+
 </html>
