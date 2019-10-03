@@ -1,11 +1,8 @@
-var localstore = window.localStorage;
-var partyName = localstore.getItem("partyName");
-var peerId = localstore.getItem("peerId");
+var partyName;
+var peerId;
 
 var serverPollingId;
 var peerPollingId;
-
-var connAPI = "/party/" + partyName + "/peer/" + peerId + "/connections";
 
 function get_request(url, callback) {
     var request = new XMLHttpRequest();
@@ -36,6 +33,8 @@ function post_request(url, data, callback) {
 
 
 function checkConnections() {
+    var connAPI = "/party/" + partyName + "/peer/" + peerId + "/connections";
+
     get_request(connAPI, function(data) {
         var partyFull = processConnections(partyName, peerId, data);
 
@@ -654,8 +653,31 @@ function encryptPackForDistributing(shuffledPack) {
     return shuffledPack;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById("idHolder").textContent = peerId;
-    updateStatusText("Checking party");
-    serverPollingId = window.setInterval(checkConnections, 2500);
-});
+function createParty() {
+    partyName = document.getElementById("partyName").value;
+    document.getElementById("errorText").textContent = "";
+
+    var createPartyAPI = "/party/" + partyName;
+    var errorPrefix = "err:";
+
+    get_request( createPartyAPI, function(data) {
+        console.log("creating party", data);
+
+        if( data.err != undefined ) {
+            var errorMessage = data.substring( errorPrefix.length );
+            document.getElementById("errorText").textContent = errorMessage;
+            return;
+        }
+
+        peerId = data.peerId;
+        console.log("peerId: " + peerId);
+        document.getElementById("idHolder").textContent = peerId;
+        showElementById("id-icon-div");
+
+        updateStatusText("Checking party");
+        hideElementById("connectRow");
+        showElementById("contentRow");
+
+        serverPollingId = window.setInterval(checkConnections, 2500);
+    });
+}

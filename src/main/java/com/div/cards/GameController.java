@@ -7,7 +7,9 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 @Controller
@@ -23,11 +25,6 @@ public class GameController {
     @GetMapping("/play")
     public ModelAndView play() {
         return new ModelAndView("play.html");
-    }
-
-    @GetMapping("/play/{gameId}")
-    public ModelAndView playGame() {
-        return new ModelAndView("peer.html");
     }
 
     @GetMapping("/party/list")
@@ -58,17 +55,17 @@ public class GameController {
 
     @GetMapping("/party/{partyName}")
     @ResponseBody
-    public String createOrJoinParty(@PathVariable String partyName) {
+    public Map<String, String> createOrJoinParty(@PathVariable String partyName) {
         log.info("Got request for party {}", partyName);
 
         if( party.containsKey(partyName) && party.get(partyName).size() >= 4 ) {
             log.info("Party {} is full", partyName);
-            return ERROR_PREFIX + "party full";
+            return Collections.singletonMap("err", "Party is full");
         }
 
         if( ! hasOnlyAlphabetsAndNumbers(partyName) ) {
             log.info("Party name {} does not satisfy regex {}", partyName, PARTY_NAME_REGEX);
-            return ERROR_PREFIX + "party name should satisfy " + PARTY_NAME_REGEX;
+            return Collections.singletonMap("err", "Party name should satisfy " + PARTY_NAME_REGEX);
         }
 
         String newPeer = uuidUtil.base64();
@@ -78,7 +75,7 @@ public class GameController {
         }
 
         addPeerToParty(newPeer, partyName);
-        return newPeer;
+        return Collections.singletonMap("peerId", newPeer);
     }
 
     private boolean hasOnlyAlphabetsAndNumbers(String name) {
