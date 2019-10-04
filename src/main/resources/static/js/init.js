@@ -85,32 +85,42 @@ function sendOrder() {
     gameState = "WAITING_FOR_ORDER";
 }
 
+var loadPercentage = 0;
+
 function processPeerJsonMsg(msg) {
     console.log("processing", msg, ", state", gameState);
     switch ( gameState ) {
         case "SEND_ORDER":
             sendOrder();
+            loadPercentage += 10;
             break;
         case "WAITING_FOR_ORDER":
             waiting_order(msg);
+            loadPercentage += 15;
             break;
         case "WAITING_FOR_CARDS":
             waiting_cards_encrypt(msg);
+            loadPercentage += 25;
             break;
         case "WAITING_FOR_CARDS_TO_DIST":
             waiting_cards_encrypt_each(msg);
+            loadPercentage += 20;
             break;
         case "WAITING_FOR_MY_CARDS":
             waiting_my_cards(msg);
+            loadPercentage += 15;
             break;
         case "WAITING_FOR_PACK_RECEIVED_MARKER":
             waiting_pack_received_marker();
+            loadPercentage += 15;
             break;
         case "WAITING_FOR_KEYS":
             waiting_keys(msg);
+            loadPercentage = 0;
             break;
         case "WAITING_PEER_BETS":
             waiting_peer_bets(msg);
+            loadPercentage = 0;
             break;
         case "WAITING_FOR_TRUMP":
             waiting_peer_trump(msg);
@@ -120,6 +130,13 @@ function processPeerJsonMsg(msg) {
             break;
         default:
             console.log("default switch state:", gameState);
+    }
+
+    if( loadPercentage == 0 ) {
+        hideElementById("game-loader");
+    } else {
+        showElementById("game-loader");
+        document.getElementById("game-loader").style.width = (loadPercentage >= 100 ? 99 : loadPercentage) + "%";
     }
 }
 
@@ -555,7 +572,8 @@ function getScore(face, suit) {
 function getPeerDC( otherPeerId ) {
     var conns = Object.keys(connectionState);
     for( i=0; i<conns.length; i++ ) {
-        if( conns[i].indexOf( otherPeerId ) != -1 ) {
+        var key = conns[i];
+        if( key.startsWith(otherPeerId+">") || key.endsWith(">"+otherPeerId) ) {
             return connectionState[conns[i]].dc;
         }
     }
@@ -700,9 +718,14 @@ function onSignIn(googleUser) {
 
     id_token = googleUser.getAuthResponse().id_token;
     console.log("id_token", id_token);
+
     peerId = profile.getName().replace(" ", "_");
     document.getElementById("idHolder").textContent = peerId;
+
+    showElementById("logout-div");
+    document.getElementById("id-icon-div").className += "with-logout";
     showElementById("id-icon-div");
+
     hideElementById("signinRow");
     showElementById("connectRow");
 }
@@ -713,4 +736,15 @@ function anonymousSignIn() {
     showElementById("id-icon-div");
     hideElementById("signinRow");
     showElementById("connectRow");
+}
+
+function signOut() {
+    var auth2 = gapi.auth2.getAuthInstance();
+    auth2.signOut().then(function () {
+        console.log('User signed out.');
+
+        var element = document.getElementById("id-icon-div");
+        element.className = element.className.replace("with-logout", "");
+        hideElementById("id-icon-div");
+    });
 }

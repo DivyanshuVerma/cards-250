@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
     <title>Cards 250 Game</title>
@@ -11,9 +11,10 @@
     <div class="wrapper wp-header">
         <div class="header">
             <div class="page-title"><h1>Cards 250</h1></div>
-            <div class="id-icon" id="id-icon-div" style="display:none;"><h3 id="idHolder"></h3></div>
+            <div class="id-icon with-logout" id="id-icon-div" style="display:none;"><h3 id="idHolder"></h3></div>
+            <div class="logout-icon" id="logout-div" onclick="signOut()" style="display:none;"><h3>Log Out</h3></div>
             <div class="help-icon"><h3>How to play?</h3></div>
-            <div class="header-hr"><hr/></div>
+            <div class="header-hr"><hr id="game-loader"/></div>
         </div>
     </div>
 
@@ -21,7 +22,7 @@
         <div class="g-signin2" style="margin-left: calc(50% - 60px);" data-onsuccess="onSignIn"></div>
         <div><h2>to remember scores</h2></div>
         <div><h2>Or</h2></div>
-        <div class="button button-secondary button-shrink" onclick="anonymousSignIn()">Join as <span id="gamerTag">ThreadyTomato</span></div>
+        <div class="button button-secondary button-shrink" onclick="anonymousSignIn()">Join as <span id="gamerTag" th:text="${gameTag}">ThreadyTomato</span></div>
     </div>
 
     <div class="wrapper wp-connect" id="connectRow" style="display:none;">
@@ -72,8 +73,6 @@
 
     <div class="wrapper wp-pastmoves" id="pastMovesRow" style="display:none;"></div>
 
-    <hr/>
-
     <div class="wrapper footer">
         <div><h1>Made with <span style="font-size: 50px">♥</span> by <a class="dark-link" href="https://divyanshuverma.in">Divyanshu Verma</a></h1></div>
         <div><h3><a class="dark-link" href="https://github.com/DivyanshuVerma/cards-250">Check out the source</a></h3></div>
@@ -85,14 +84,5 @@
 <script src="/js/signalling.js"></script>
 <script src="/js/game.js"></script>
 <script src="/js/init.js"></script>
-
-<script>
-  function signOut() {
-    var auth2 = gapi.auth2.getAuthInstance();
-    auth2.signOut().then(function () {
-      console.log('User signed out.');
-    });
-  }
-</script>
 
 </html>

@@ -1,15 +1,13 @@
 package com.div.cards;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 @Controller
@@ -22,9 +20,17 @@ public class GameController {
     private final String PARTY_NAME_REGEX = "[a-zA-Z0-9]+";
     private final String ERROR_PREFIX = "err:";
 
+    private final List<String> gameTags = Arrays.asList(
+            "Tomato", "Potato", "Mario", "Luigi", "Batman", "Flash", "MrBot", "Pikachu", "Voldemort", "Potter",
+            "Joey", "Chandler", "Gordon", "WalterW", "Heisenberg", "Tesla"
+    );
+
     @GetMapping("/play")
     public ModelAndView play() {
-        return new ModelAndView("play.html");
+        ModelAndView mav = new ModelAndView("play.html");
+        var index = (int) (Math.random() * gameTags.size());
+        mav.addObject("gameTag", gameTags.get(index));
+        return mav;
     }
 
     @GetMapping("/party/list")
@@ -81,6 +87,11 @@ public class GameController {
         if( ! party.containsKey(partyName) ) {
             log.info("Creating party {} for peer {}", partyName, newPeer);
             party.put(partyName, new HashMap<>());
+        }
+
+        var peers = party.get(partyName);
+        while( peers.containsKey(newPeer) ) {
+            newPeer += String.valueOf((int) (Math.random() * 9 + 1));
         }
 
         addPeerToParty(newPeer, partyName);
