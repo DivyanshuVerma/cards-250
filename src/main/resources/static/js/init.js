@@ -745,6 +745,6 @@ function signOut() {
 
         var element = document.getElementById("id-icon-div");
         element.className = element.className.replace("with-logout", "");
-        hideElementById("id-icon-div");
+        hideElementById("logout-icon");
     });
 }

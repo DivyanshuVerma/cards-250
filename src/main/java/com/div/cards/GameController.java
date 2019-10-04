@@ -1,5 +1,9 @@
 package com.div.cards;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +18,12 @@ import java.util.function.Consumer;
 public class GameController {
 
     @Inject UUIDUtil uuidUtil;
+
+    private final GoogleIdTokenVerifier verifier;
+
+    public GameController() {
+        verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new JacksonFactory()).build();
+    }
 
     HashMap<String, HashMap<String, ArrayList<Connection>>> party = new HashMap<>();
     private final String PARTY_NAME_REGEX = "[a-zA-Z0-9]+";
@@ -78,8 +88,22 @@ public class GameController {
         log.info("Parameters received: peerId {} id_token {}", peerId, idToken);
 
         // authenticate
-        String newPeer = peerId;
-        if( newPeer == null ) {
+        String newPeer = null;
+        if( idToken != null ) {
+            try {
+                GoogleIdToken token = verifier.verify(idToken);
+                if( token != null ) {
+                    log.info("Got id token {}", token);
+                    newPeer = (String) token.getPayload().get("given_name");
+                }
+            } catch (Exception e) {
+                log.warn("Exception occured while verifying token", e);
+            }
+        }
+
+        if( newPeer == null && peerId != null ) {
+            newPeer = peerId;
+        } else {
             newPeer = uuidUtil.base64();
         }
 
