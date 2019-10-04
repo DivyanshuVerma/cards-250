@@ -439,7 +439,7 @@ function displayEndGame(moves) {
     moves.push({ cards: [] });
 
     hideElementById("cardsDiv");
-    var statusElem = document.getElementById("status-wrap");
+    var statusElem = document.getElementById("contentRow");
     statusElem.className = statusElem.className.replace("with-action", "");
 
     var curMove = moves[moves.length-1];

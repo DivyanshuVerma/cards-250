@@ -276,7 +276,7 @@ function decryptOwnPack() {
 }
 
 function processCards() {
-    var statusWrapper = document.getElementById("status-wrap");
+    var statusWrapper = document.getElementById("contentRow");
     statusWrapper.className += " with-action";
 
     gameState = "WAITING_PEER_BETS";
