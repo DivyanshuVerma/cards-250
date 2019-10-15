@@ -456,6 +456,13 @@ body {
         height: inherit;
     }
 
+    .action {
+        grid-row: 2;
+        grid-column: 1;
+    }
+}
+
+@media all and (max-width: 800px) {
     .status-peer {
         grid-template: repeat(2, 155px) / repeat(2, 150px);
         grid-gap: 20px;
@@ -463,11 +470,6 @@ body {
 
     .peer-passed-face {
         font-size: 70px;
-    }
-
-    .action {
-        grid-row: 2;
-        grid-column: 1;
     }
 
     .action-card {

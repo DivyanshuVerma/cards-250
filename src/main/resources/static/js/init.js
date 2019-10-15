@@ -676,6 +676,11 @@ function createParty() {
     partyName = document.getElementById("partyName").value;
     document.getElementById("errorText").textContent = "";
 
+    if( partyName == undefined || partyName == "" ) {
+        document.getElementById("errorText").textContent = "Enter a name for the party!";
+        return;
+    }
+
     var createPartyAPI = "/party/" + partyName;
     var errorPrefix = "err:";
 
